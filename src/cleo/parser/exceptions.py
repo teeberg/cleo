@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from cleo.parser.common import SUPPRESS
 
+if TYPE_CHECKING:
+    from cleo.parser.actions import Action
 
-def _get_action_name(argument):
+
+def _get_action_name(argument: Action | None) -> str | None:
     if argument is None:
         return None
     if argument.option_strings:
@@ -24,16 +29,16 @@ class ArgumentError(Exception):
     information about the argument that caused it.
     """
 
-    def __init__(self, argument, message):
-        self.argument_name = _get_action_name(argument)
+    def __init__(self, argument: Action | None, message: str) -> None:
+        self.argument_name: str | None = _get_action_name(argument)
         self.message = message
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.argument_name is None:
-            format = "%(message)s"
+            format = f"{self.message}"
         else:
-            format = "argument %(argument_name)s: %(message)s"
-        return format % {"message": self.message, "argument_name": self.argument_name}
+            format = f"argument {self.argument_name}: {self.message}"
+        return format
 
 
 class ArgumentTypeError(Exception):
