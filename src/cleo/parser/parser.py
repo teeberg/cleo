@@ -74,6 +74,14 @@ import re
 import sys
 
 from pathlib import Path
+from typing import IO
+from typing import TYPE_CHECKING
+from typing import Any
+from typing import Callable
+from typing import Iterable
+from typing import Iterator
+from typing import NoReturn
+from typing import Pattern
 
 from cleo.parser.actions import Action
 from cleo.parser.actions import BooleanOptionalAction
@@ -97,6 +105,10 @@ from cleo.parser.exceptions import ArgumentTypeError
 from cleo.parser.exceptions import _get_action_name
 
 
+if TYPE_CHECKING:
+    from cleo._types import Self
+
+
 __all__ = [
     "ArgumentParser",
     "ArgumentError",
@@ -114,11 +126,6 @@ __all__ = [
     "SUPPRESS",
 ]
 
-
-# =============================
-# Utility functions and classes
-# =============================
-
 # ===============
 # Formatting Help
 # ===============
@@ -131,9 +138,28 @@ class HelpFormatter:
     provided by the class are considered an implementation detail.
     """
 
-    def __init__(self, prog, indent_increment=2, max_help_position=24, width=None):
+    _prog: str
+    _indent_increment: int
+    _max_help_position: int
+    _width: int
+    _current_indent: int
+    _level: int
+    _action_max_length: int
+    _root_section: _Section
+    _current_section: _Section
+    _whitespace_matcher: Pattern[str]
+    _long_break_matcher: Pattern[str]
+
+    def __init__(
+        self,
+        prog: str,
+        indent_increment: int = 2,
+        max_help_position: int = 24,
+        width: int | None = None,
+    ) -> None:
         # default setting for width
         if width is None:
+            # TODO: replace with Terminal
             import shutil
 
             width = shutil.get_terminal_size().columns
@@ -159,23 +185,28 @@ class HelpFormatter:
     # ===============================
     # Section and indentation methods
     # ===============================
-    def _indent(self):
+    def _indent(self) -> None:
         self._current_indent += self._indent_increment
         self._level += 1
 
-    def _dedent(self):
+    def _dedent(self) -> None:
         self._current_indent -= self._indent_increment
         assert self._current_indent >= 0, "Indent decreased below 0."
         self._level -= 1
 
     class _Section:
+        formatter: HelpFormatter
+        heading: str | None
+        parent: Self | None
+        items: list[tuple[Callable[..., str], Iterable[Any]]]
+
         def __init__(self, formatter, parent, heading=None):
             self.formatter = formatter
             self.parent = parent
             self.heading = heading
             self.items = []
 
-        def format_help(self):
+        def format_help(self) -> str:
             # format the indented section
             if self.parent is not None:
                 self.formatter._indent()
@@ -198,32 +229,38 @@ class HelpFormatter:
             # join the section-initial newline, the heading and the help
             return join(["\n", heading, item_help, "\n"])
 
-    def _add_item(self, func, args):
+    def _add_item(self, func: Callable[..., str], args: Iterable[Any]) -> None:
         self._current_section.items.append((func, args))
 
     # ========================
     # Message building methods
     # ========================
-    def start_section(self, heading):
+    def start_section(self, heading: str | None) -> None:
         self._indent()
         section = self._Section(self, self._current_section, heading)
         self._add_item(section.format_help, [])
         self._current_section = section
 
-    def end_section(self):
+    def end_section(self) -> None:
         self._current_section = self._current_section.parent
         self._dedent()
 
-    def add_text(self, text):
+    def add_text(self, text: str | None) -> None:
         if text is not SUPPRESS and text is not None:
             self._add_item(self._format_text, [text])
 
-    def add_usage(self, usage, actions, groups, prefix=None):
+    def add_usage(
+        self,
+        usage: str | None,
+        actions: Iterable[Action],
+        groups: Iterable[_MutuallyExclusiveGroup],
+        prefix: str | None = None,
+    ) -> None:
         if usage is not SUPPRESS:
             args = usage, actions, groups, prefix
             self._add_item(self._format_usage, args)
 
-    def add_argument(self, action):
+    def add_argument(self, action: Action) -> None:
         if action.help is not SUPPRESS:
             # find all invocations
             get_invocation = self._format_action_invocation
@@ -243,24 +280,30 @@ class HelpFormatter:
             # add the item to the list
             self._add_item(self._format_action, [action])
 
-    def add_arguments(self, actions):
+    def add_arguments(self, actions: Iterable[Action]) -> None:
         for action in actions:
             self.add_argument(action)
 
     # =======================
     # Help-formatting methods
     # =======================
-    def format_help(self):
+    def format_help(self) -> str:
         help = self._root_section.format_help()
         if help:
             help = self._long_break_matcher.sub("\n\n", help)
             help = help.strip("\n") + "\n"
         return help
 
-    def _join_parts(self, part_strings):
+    def _join_parts(self, part_strings: Iterable[str]) -> str:
         return "".join([part for part in part_strings if part and part is not SUPPRESS])
 
-    def _format_usage(self, usage, actions, groups, prefix):
+    def _format_usage(
+        self,
+        usage: str | None,
+        actions: Iterable[Action],
+        groups: Iterable[_MutuallyExclusiveGroup],
+        prefix: str | None,
+    ) -> str:
         if prefix is None:
             prefix = "usage: "
 
@@ -352,7 +395,9 @@ class HelpFormatter:
         # prefix with 'usage:'
         return f"{prefix}{usage}\n\n"
 
-    def _format_actions_usage(self, actions, groups):
+    def _format_actions_usage(
+        self, actions: Iterable[Action], groups: Iterable[_MutuallyExclusiveGroup]
+    ) -> str:
         # find group indices and identify actions in groups
         group_actions = set()
         inserts = {}
@@ -463,14 +508,14 @@ class HelpFormatter:
         # return the text
         return text.strip()
 
-    def _format_text(self, text):
+    def _format_text(self, text: str) -> str:
         if "%(prog)" in text:
             text = text % {"prog": self._prog}
         text_width = max(self._width - self._current_indent, 11)
         indent = " " * self._current_indent
         return self._fill_text(text, text_width, indent) + "\n\n"
 
-    def _format_action(self, action):
+    def _format_action(self, action: Action) -> str:
         # determine the required width and the entry label
         help_position = min(self._action_max_length + 2, self._max_help_position)
         help_width = max(self._width - help_position, 11)
@@ -522,7 +567,7 @@ class HelpFormatter:
         # return a single string
         return self._join_parts(parts)
 
-    def _format_action_invocation(self, action):
+    def _format_action_invocation(self, action: Action) -> str:
         if not action.option_strings:
             default = self._get_default_metavar_for_positional(action)
             (metavar,) = self._metavar_formatter(action, default)(1)
@@ -539,7 +584,9 @@ class HelpFormatter:
         args_string = self._format_args(action, default)
         return ", ".join(action.option_strings) + " " + args_string
 
-    def _metavar_formatter(self, action, default_metavar):
+    def _metavar_formatter(
+        self, action: Action, default_metavar: str
+    ) -> Callable[[int], tuple[str, ...]]:
         if action.metavar is not None:
             result = action.metavar
         elif action.choices is not None:
@@ -548,7 +595,7 @@ class HelpFormatter:
         else:
             result = default_metavar
 
-        def format(tuple_size):
+        def format(tuple_size: int) -> tuple[str, ...]:
             if isinstance(result, tuple):
                 return result
 
@@ -556,7 +603,7 @@ class HelpFormatter:
 
         return format
 
-    def _format_args(self, action, default_metavar):
+    def _format_args(self, action: Action, default_metavar: str) -> str:
         get_metavar = self._metavar_formatter(action, default_metavar)
         if action.nargs is None:
             result = "%s" % get_metavar(1)
@@ -584,7 +631,7 @@ class HelpFormatter:
             result = " ".join(formats) % get_metavar(action.nargs)
         return result
 
-    def _expand_help(self, action):
+    def _expand_help(self, action: Action) -> str:
         params = dict(vars(action), prog=self._prog)
         for name in list(params):
             if params[name] is SUPPRESS:
@@ -597,7 +644,7 @@ class HelpFormatter:
             params["choices"] = choices_str
         return self._get_help_string(action) % params
 
-    def _iter_indented_subactions(self, action):
+    def _iter_indented_subactions(self, action: Action) -> Iterator[Action]:
         try:
             get_subactions = action._get_subactions
         except AttributeError:
@@ -607,7 +654,7 @@ class HelpFormatter:
             yield from get_subactions()
             self._dedent()
 
-    def _split_lines(self, text, width):
+    def _split_lines(self, text: str, width: int) -> list[str]:
         text = self._whitespace_matcher.sub(" ", text).strip()
         # The textwrap module is used only for formatting help.
         # Delay its import for speeding up the common usage of argparse.
@@ -615,7 +662,7 @@ class HelpFormatter:
 
         return textwrap.wrap(text, width)
 
-    def _fill_text(self, text, width, indent):
+    def _fill_text(self, text: str, width: int, indent: int) -> str:
         text = self._whitespace_matcher.sub(" ", text).strip()
         import textwrap
 
@@ -623,13 +670,13 @@ class HelpFormatter:
             text, width, initial_indent=indent, subsequent_indent=indent
         )
 
-    def _get_help_string(self, action):
+    def _get_help_string(self, action: Action) -> str | None:
         return action.help
 
-    def _get_default_metavar_for_optional(self, action):
+    def _get_default_metavar_for_optional(self, action: Action) -> str:
         return action.dest.upper()
 
-    def _get_default_metavar_for_positional(self, action):
+    def _get_default_metavar_for_positional(self, action: Action) -> str:
         return action.dest
 
 
@@ -640,7 +687,7 @@ class RawDescriptionHelpFormatter(HelpFormatter):
     provided by the class are considered an implementation detail.
     """
 
-    def _fill_text(self, text, width, indent):
+    def _fill_text(self, text: str, width: int, indent: int) -> str:
         return "".join(indent + line for line in text.splitlines(keepends=True))
 
 
@@ -651,7 +698,7 @@ class RawTextHelpFormatter(RawDescriptionHelpFormatter):
     provided by the class are considered an implementation detail.
     """
 
-    def _split_lines(self, text, width):
+    def _split_lines(self, text: str, width: int) -> list[str]:
         return text.splitlines()
 
 
@@ -662,7 +709,7 @@ class ArgumentDefaultsHelpFormatter(HelpFormatter):
     provided by the class are considered an implementation detail.
     """
 
-    def _get_help_string(self, action):
+    def _get_help_string(self, action: Action) -> str | None:
         """
         Add the default value to the option help message.
 
@@ -690,16 +737,11 @@ class MetavarTypeHelpFormatter(HelpFormatter):
     provided by the class are considered an implementation detail.
     """
 
-    def _get_default_metavar_for_optional(self, action):
+    def _get_default_metavar_for_optional(self, action: Action) -> str:
         return action.type.__name__
 
-    def _get_default_metavar_for_positional(self, action):
+    def _get_default_metavar_for_positional(self, action: Action) -> str:
         return action.type.__name__
-
-
-# =====================
-# Options and Arguments
-# =====================
 
 
 # ==============
@@ -724,13 +766,19 @@ class FileType:
             be handled. Accepts the same value as the builtin open() function.
     """
 
-    def __init__(self, mode="r", bufsize=-1, encoding=None, errors=None):
+    def __init__(
+        self,
+        mode: str = "r",
+        bufsize: int = -1,
+        encoding: str | None = None,
+        errors: str | None = None,
+    ) -> None:
         self._mode = mode
         self._bufsize = bufsize
         self._encoding = encoding
         self._errors = errors
 
-    def __call__(self, string):
+    def __call__(self, string: str) -> IO[Any]:
         # the special argument "-" means sys.std{in,out}
         if string == "-":
             if "r" in self._mode:
@@ -776,21 +824,27 @@ class Namespace(_AttributeHolder):
     string representation.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         for name in kwargs:
             setattr(self, name, kwargs[name])
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, Namespace):
             return NotImplemented
         return vars(self) == vars(other)
 
-    def __contains__(self, key):
+    def __contains__(self, key: str) -> bool:
         return key in self.__dict__
 
 
 class _ActionsContainer:
-    def __init__(self, description, prefix_chars, argument_default, conflict_handler):
+    def __init__(
+        self,
+        description: str | None,
+        prefix_chars: str,
+        argument_default: Any,
+        conflict_handler: str,
+    ) -> None:
         super().__init__()
 
         self.description = description
@@ -799,7 +853,7 @@ class _ActionsContainer:
         self.conflict_handler = conflict_handler
 
         # set up registries
-        self._registries = {}
+        self._registries: dict[str, dict[Any, Any]] = {}
 
         # register actions
         self.register("action", None, _StoreAction)
@@ -819,37 +873,37 @@ class _ActionsContainer:
         self._get_handler()
 
         # action storage
-        self._actions = []
-        self._option_string_actions = {}
+        self._actions: list[Action] = []
+        self._option_string_actions: dict[str, Action] = {}
 
         # groups
-        self._action_groups = []
-        self._mutually_exclusive_groups = []
+        self._action_groups: list[_ArgumentGroup] = []
+        self._mutually_exclusive_groups: list[_MutuallyExclusiveGroup] = []
 
         # defaults storage
-        self._defaults = {}
+        self._defaults: dict[str, Any] = {}
 
         # determines whether an "option" looks like a negative number
-        self._negative_number_matcher = re.compile(r"^-\d+$|^-\d*\.\d+$")
+        self._negative_number_matcher: Pattern[str] = re.compile(r"^-\d+$|^-\d*\.\d+$")
 
         # whether or not there are any optionals that look like negative
         # numbers -- uses a list so it can be shared and edited
-        self._has_negative_number_optionals = []
+        self._has_negative_number_optionals: list[bool] = []
 
     # ====================
     # Registration methods
     # ====================
-    def register(self, registry_name, value, object):
+    def register(self, registry_name: str, value: Any, object: Any) -> None:
         registry = self._registries.setdefault(registry_name, {})
         registry[value] = object
 
-    def _registry_get(self, registry_name, value, default=None):
+    def _registry_get(self, registry_name: str, value: Any, default: Any = None) -> Any:
         return self._registries[registry_name].get(value, default)
 
     # ==================================
     # Namespace default accessor methods
     # ==================================
-    def set_defaults(self, **kwargs):
+    def set_defaults(self, **kwargs: Any) -> None:
         self._defaults.update(kwargs)
 
         # if these defaults match any existing arguments, replace
@@ -858,7 +912,7 @@ class _ActionsContainer:
             if action.dest in kwargs:
                 action.default = kwargs[action.dest]
 
-    def get_default(self, dest):
+    def get_default(self, dest: str) -> Any:
         for action in self._actions:
             if action.dest == dest and action.default is not None:
                 return action.default
@@ -867,6 +921,7 @@ class _ActionsContainer:
     # =======================
     # Adding argument actions
     # =======================
+    # TODO: fill in the annotations when refactored
     def add_argument(self, *args, **kwargs):
         """
         add_argument(dest, ..., name=value, ...)
@@ -930,7 +985,7 @@ class _ActionsContainer:
         self._mutually_exclusive_groups.append(group)
         return group
 
-    def _add_action(self, action):
+    def _add_action(self, action: Action) -> Action:
         # resolve any conflicts
         self._check_conflict(action)
 
@@ -953,18 +1008,19 @@ class _ActionsContainer:
         # return the created action
         return action
 
-    def _remove_action(self, action):
+    def _remove_action(self, action: Action) -> None:
         self._actions.remove(action)
 
-    def _add_container_actions(self, container):
+    def _add_container_actions(self, container: _ActionsContainer) -> None:
         # collect groups by titles
         title_group_map = {}
         for group in self._action_groups:
             if group.title in title_group_map:
                 # This branch could happen if a derived class added
                 # groups with duplicated titles in __init__
-                msg = "cannot merge actions - two groups are named %r"
-                raise ValueError(msg % (group.title))
+                raise ValueError(
+                    f"cannot merge actions - two groups are named {group.title!r}"
+                )
             title_group_map[group.title] = group
 
         # map each action to its group
@@ -997,7 +1053,7 @@ class _ActionsContainer:
         for action in container._actions:
             group_map.get(action, self)._add_action(action)
 
-    def _get_positional_kwargs(self, dest, **kwargs):
+    def _get_positional_kwargs(self, dest: str, **kwargs: Any) -> dict[str, Any]:
         # make sure required is not specified
         if "required" in kwargs:
             msg = "'required' is an invalid argument for positionals"
@@ -1013,7 +1069,7 @@ class _ActionsContainer:
         # return the keyword arguments with no option strings
         return dict(kwargs, dest=dest, option_strings=[])
 
-    def _get_optional_kwargs(self, *args, **kwargs):
+    def _get_optional_kwargs(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
         # determine short and long option strings
         option_strings = []
         long_option_strings = []
@@ -1048,11 +1104,11 @@ class _ActionsContainer:
         # return the updated keyword arguments
         return dict(kwargs, dest=dest, option_strings=option_strings)
 
-    def _pop_action_class(self, kwargs, default=None):
+    def _pop_action_class(self, kwargs: Any, default: type[Action] | None = None):
         action = kwargs.pop("action", default)
         return self._registry_get("action", action, action)
 
-    def _get_handler(self):
+    def _get_handler(self) -> Callable[[Action, Iterable[tuple[str, Action]]], Any]:
         # determine function from conflict handler string
         handler_func_name = "_handle_conflict_%s" % self.conflict_handler
         try:
@@ -1061,7 +1117,7 @@ class _ActionsContainer:
             msg = "invalid conflict_resolution value: %r"
             raise ValueError(msg % self.conflict_handler) from e
 
-    def _check_conflict(self, action):
+    def _check_conflict(self, action: Action) -> None:
         # find all options that conflict with this option
         confl_optionals = []
         for option_string in action.option_strings:
@@ -1074,7 +1130,9 @@ class _ActionsContainer:
             conflict_handler = self._get_handler()
             conflict_handler(action, confl_optionals)
 
-    def _handle_conflict_error(self, action, conflicting_actions):
+    def _handle_conflict_error(
+        self, action: Action, conflicting_actions: Iterable[tuple[str, Action]]
+    ) -> NoReturn:
         message = (
             "conflicting option strings: %s"
             if len(conflicting_actions)
@@ -1085,7 +1143,9 @@ class _ActionsContainer:
         )
         raise ArgumentError(action, message % conflict_string)
 
-    def _handle_conflict_resolve(self, action, conflicting_actions):
+    def _handle_conflict_resolve(
+        self, action: Action, conflicting_actions: Iterable[tuple[str, Action]]
+    ) -> None:
         # remove all conflicting options
         for option_string, action in conflicting_actions:
             # remove the conflicting option
@@ -1099,18 +1159,18 @@ class _ActionsContainer:
 
 
 class _ArgumentGroup(_ActionsContainer):
+    # TODO: fill in annotations
     def __init__(self, container, title=None, description=None, **kwargs):
         # add any missing keyword arguments by checking the container
         update = kwargs.setdefault
         update("conflict_handler", container.conflict_handler)
         update("prefix_chars", container.prefix_chars)
         update("argument_default", container.argument_default)
-        super_init = super().__init__
-        super_init(description=description, **kwargs)
+        super().__init__(description=description, **kwargs)
 
         # group attributes
-        self.title = title
-        self._group_actions = []
+        self.title: str | None = title
+        self._group_actions: list[Action] = []
 
         # share most attributes with the container
         self._registries = container._registries
@@ -1120,18 +1180,19 @@ class _ArgumentGroup(_ActionsContainer):
         self._has_negative_number_optionals = container._has_negative_number_optionals
         self._mutually_exclusive_groups = container._mutually_exclusive_groups
 
-    def _add_action(self, action):
+    def _add_action(self, action: Action) -> Action:
         action = super()._add_action(action)
         self._group_actions.append(action)
         return action
 
-    def _remove_action(self, action):
+    def _remove_action(self, action: Action) -> None:
         super()._remove_action(action)
         self._group_actions.remove(action)
 
     def add_argument_group(self, *args, **kwargs):
         import warnings
 
+        # TODO: resolve this (remove option to nest groups)
         warnings.warn(
             "Nesting argument groups is deprecated.",
             category=DeprecationWarning,
@@ -1141,12 +1202,12 @@ class _ArgumentGroup(_ActionsContainer):
 
 
 class _MutuallyExclusiveGroup(_ArgumentGroup):
-    def __init__(self, container, required=False):
+    def __init__(self, container: _ActionsContainer, required: bool = False):
         super().__init__(container)
         self.required = required
         self._container = container
 
-    def _add_action(self, action):
+    def _add_action(self, action: Action) -> Action:
         if action.required:
             msg = "mutually exclusive arguments must be optional"
             raise ValueError(msg)
@@ -1154,13 +1215,14 @@ class _MutuallyExclusiveGroup(_ArgumentGroup):
         self._group_actions.append(action)
         return action
 
-    def _remove_action(self, action):
+    def _remove_action(self, action: Action) -> None:
         self._container._remove_action(action)
         self._group_actions.remove(action)
 
     def add_mutually_exclusive_group(self, *args, **kwargs):
         import warnings
 
+        # TODO: resolve this (remove option to nest groups)
         warnings.warn(
             "Nesting mutually exclusive groups is deprecated.",
             category=DeprecationWarning,

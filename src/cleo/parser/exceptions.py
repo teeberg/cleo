@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from cleo.parser.common import SUPPRESS
 
+
 if TYPE_CHECKING:
     from cleo.parser.actions import Action
 

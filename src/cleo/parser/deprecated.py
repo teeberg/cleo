@@ -4,6 +4,8 @@ This module contains parts of parser that should be replaced or removed.
 
 from __future__ import annotations
 
+from typing import Any
+
 
 class _AttributeHolder:
     """Abstract base class that provides __repr__.
@@ -27,8 +29,8 @@ class _AttributeHolder:
             arg_strings.append(f"**{star_args!r}")
         return f'{type_name}({", ".join(arg_strings)})'
 
-    def _get_kwargs(self):
+    def _get_kwargs(self) -> list[tuple[str, Any]]:
         return list(self.__dict__.items())
 
-    def _get_args(self):
+    def _get_args(self) -> list[Any]:
         return []

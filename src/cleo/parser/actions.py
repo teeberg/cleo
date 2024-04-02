@@ -2,12 +2,27 @@ from __future__ import annotations
 
 import sys
 
+from typing import TYPE_CHECKING
+from typing import Any
+from typing import Callable
+from typing import Generic
+from typing import Iterable
+from typing import Literal
+from typing import Sequence
+
 from cleo.parser.common import _UNRECOGNIZED_ARGS_ATTR
 from cleo.parser.common import SUPPRESS
 from cleo.parser.common import NArgsEnum
 from cleo.parser.common import _copy_items
 from cleo.parser.deprecated import _AttributeHolder
 from cleo.parser.exceptions import ArgumentError
+from cleo.parser.parser import ArgumentParser
+from cleo.parser.parser import FileType
+from cleo.parser.parser import Namespace
+
+
+if TYPE_CHECKING:
+    from cleo.parser._types import _SUPPRESS_T
 
 
 class Action(_AttributeHolder):
@@ -63,17 +78,17 @@ class Action(_AttributeHolder):
 
     def __init__(
         self,
-        option_strings,
-        dest,
-        nargs=None,
-        const=None,
-        default=None,
-        type=None,
-        choices=None,
-        required=False,
-        help=None,
-        metavar=None,
-        deprecated=False,
+        option_strings: Sequence[str],
+        dest: str,
+        nargs: int | str | None = None,
+        const: Any = None,
+        default: Any = None,
+        type: Callable[[str], Any] | FileType | None = None,
+        choices: Iterable[Any] | None = None,
+        required: bool = False,
+        help: str | None = None,
+        metavar: str | tuple[str, ...] | None = None,
+        deprecated: bool = False,
     ):
         self.option_strings = option_strings
         self.dest = dest
@@ -106,19 +121,25 @@ class Action(_AttributeHolder):
     def format_usage(self):
         return self.option_strings[0]
 
-    def __call__(self, parser, namespace, values, option_string=None):
+    def __call__(
+        self,
+        parser: ArgumentParser,
+        namespace: Namespace,
+        values: str | Sequence[Any] | None,
+        option_string: str | None = None,
+    ) -> None:
         raise NotImplementedError(".__call__() not defined")
 
 
 class BooleanOptionalAction(Action):
     def __init__(
         self,
-        option_strings,
-        dest,
-        default=None,
-        required=False,
-        help=None,
-        deprecated=False,
+        option_strings: Sequence[str],
+        dest: str,
+        default: bool | None = None,
+        required: bool = False,
+        help: str | None = None,
+        deprecated: bool = False,
         **kwargs,
     ):
         _option_strings = []
@@ -142,7 +163,13 @@ class BooleanOptionalAction(Action):
             deprecated=deprecated,
         )
 
-    def __call__(self, parser, namespace, values, option_string=None):
+    def __call__(
+        self,
+        parser: ArgumentParser,
+        namespace: Namespace,
+        values: str | Sequence[Any] | None,
+        option_string: str | None = None,
+    ) -> None:
         if option_string in self.option_strings:
             setattr(namespace, self.dest, not option_string.startswith("--no-"))
 
@@ -153,17 +180,17 @@ class BooleanOptionalAction(Action):
 class _StoreAction(Action):
     def __init__(
         self,
-        option_strings,
-        dest,
-        nargs=None,
-        const=None,
-        default=None,
-        type=None,
-        choices=None,
-        required=False,
-        help=None,
-        metavar=None,
-        deprecated=False,
+        option_strings: Sequence[str],
+        dest: str,
+        nargs: int | str | None = None,
+        const: Any = None,
+        default: Any = None,
+        type: Callable[[str], Any] | FileType | None = None,
+        choices: Iterable[Any] | None = None,
+        required: bool = False,
+        help: str | None = None,
+        metavar: str | tuple[str, ...] | None = None,
+        deprecated: bool = False,
     ):
         if nargs == 0:
             raise ValueError(
@@ -172,7 +199,7 @@ class _StoreAction(Action):
                 "true or store const may be more appropriate"
             )
         if const is not None and nargs != NArgsEnum.OPTIONAL:
-            raise ValueError("nargs must be %r to supply const" % NArgsEnum.OPTIONAL)
+            raise ValueError(f"nargs must be {NArgsEnum.OPTIONAL!r} to supply const")
         super().__init__(
             option_strings=option_strings,
             dest=dest,
@@ -187,21 +214,27 @@ class _StoreAction(Action):
             deprecated=deprecated,
         )
 
-    def __call__(self, parser, namespace, values, option_string=None):
+    def __call__(
+        self,
+        parser: ArgumentParser,
+        namespace: Namespace,
+        values: str | Sequence[Any] | None,
+        option_string: str | None = None,
+    ) -> None:
         setattr(namespace, self.dest, values)
 
 
 class _StoreConstAction(Action):
     def __init__(
         self,
-        option_strings,
-        dest,
-        const=None,
-        default=None,
-        required=False,
-        help=None,
-        metavar=None,
-        deprecated=False,
+        option_strings: Sequence[str],
+        dest: str,
+        const: Any,
+        default: Any = None,
+        required: bool = False,
+        help: str | None = None,
+        metavar: str | tuple[str, ...] | None = None,
+        deprecated: bool = False,
     ):
         super().__init__(
             option_strings=option_strings,
@@ -214,19 +247,25 @@ class _StoreConstAction(Action):
             deprecated=deprecated,
         )
 
-    def __call__(self, parser, namespace, values, option_string=None):
+    def __call__(
+        self,
+        parser: ArgumentParser,
+        namespace: Namespace,
+        values: str | Sequence[Any] | None,
+        option_string: str | None = None,
+    ) -> None:
         setattr(namespace, self.dest, self.const)
 
 
 class _StoreTrueAction(_StoreConstAction):
     def __init__(
         self,
-        option_strings,
-        dest,
-        default=False,
-        required=False,
-        help=None,
-        deprecated=False,
+        option_strings: Sequence[str],
+        dest: str,
+        default: bool = False,
+        required: bool = False,
+        help: str | None = None,
+        deprecated: bool = False,
     ):
         super().__init__(
             option_strings=option_strings,
@@ -242,12 +281,12 @@ class _StoreTrueAction(_StoreConstAction):
 class _StoreFalseAction(_StoreConstAction):
     def __init__(
         self,
-        option_strings,
-        dest,
-        default=True,
-        required=False,
-        help=None,
-        deprecated=False,
+        option_strings: Sequence[str],
+        dest: str,
+        default: bool = True,
+        required: bool = False,
+        help: str | None = None,
+        deprecated: bool = False,
     ):
         super().__init__(
             option_strings=option_strings,
@@ -282,7 +321,7 @@ class _AppendAction(Action):
                 "the append const action may be more appropriate"
             )
         if const is not None and nargs != NArgsEnum.OPTIONAL:
-            raise ValueError("nargs must be %r to supply const" % NArgsEnum.OPTIONAL)
+            raise ValueError(f"nargs must be {NArgsEnum.OPTIONAL!r} to supply const")
         super().__init__(
             option_strings=option_strings,
             dest=dest,
@@ -297,7 +336,13 @@ class _AppendAction(Action):
             deprecated=deprecated,
         )
 
-    def __call__(self, parser, namespace, values, option_string=None):
+    def __call__(
+        self,
+        parser: ArgumentParser,
+        namespace: Namespace,
+        values: str | Sequence[Any] | None,
+        option_string: str | None = None,
+    ) -> None:
         items = getattr(namespace, self.dest, None)
         items = _copy_items(items)
         items.append(values)
@@ -307,14 +352,14 @@ class _AppendAction(Action):
 class _AppendConstAction(Action):
     def __init__(
         self,
-        option_strings,
-        dest,
-        const=None,
-        default=None,
-        required=False,
-        help=None,
-        metavar=None,
-        deprecated=False,
+        option_strings: Sequence[str],
+        dest: str,
+        const: Any | None = None,
+        default: Any = None,
+        required: bool = False,
+        help: str | None = None,
+        metavar: str | tuple[str, ...] | None = None,
+        deprecated: bool = False,
     ):
         super().__init__(
             option_strings=option_strings,
@@ -328,7 +373,13 @@ class _AppendConstAction(Action):
             deprecated=deprecated,
         )
 
-    def __call__(self, parser, namespace, values, option_string=None):
+    def __call__(
+        self,
+        parser: ArgumentParser,
+        namespace: Namespace,
+        values: str | Sequence[Any] | None,
+        option_string: str | None = None,
+    ) -> None:
         items = getattr(namespace, self.dest, None)
         items = _copy_items(items)
         items.append(self.const)
@@ -338,12 +389,12 @@ class _AppendConstAction(Action):
 class _CountAction(Action):
     def __init__(
         self,
-        option_strings,
-        dest,
-        default=None,
-        required=False,
-        help=None,
-        deprecated=False,
+        option_strings: Sequence[str],
+        dest: str,
+        default: Any = None,
+        required: bool = False,
+        help: str | None = None,
+        deprecated: bool = False,
     ):
         super().__init__(
             option_strings=option_strings,
@@ -355,7 +406,13 @@ class _CountAction(Action):
             deprecated=deprecated,
         )
 
-    def __call__(self, parser, namespace, values, option_string=None):
+    def __call__(
+        self,
+        parser: ArgumentParser,
+        namespace: Namespace,
+        values: str | Sequence[Any] | None,
+        option_string: str | None = None,
+    ) -> None:
         count = getattr(namespace, self.dest, None)
         if count is None:
             count = 0
@@ -365,12 +422,12 @@ class _CountAction(Action):
 class _HelpAction(Action):
     def __init__(
         self,
-        option_strings,
-        dest=SUPPRESS,
-        default=SUPPRESS,
-        help=None,
+        option_strings: Sequence[str],
+        dest: Literal[SUPPRESS] = SUPPRESS,
+        default: Literal[SUPPRESS] = SUPPRESS,
+        help: str | None = None,
         deprecated=False,
-    ):
+    ) -> None:
         super().__init__(
             option_strings=option_strings,
             dest=dest,
@@ -380,7 +437,13 @@ class _HelpAction(Action):
             deprecated=deprecated,
         )
 
-    def __call__(self, parser, namespace, values, option_string=None):
+    def __call__(
+        self,
+        parser: ArgumentParser,
+        namespace: Namespace,
+        values: str | Sequence[Any] | None,
+        option_string: str | None = None,
+    ) -> None:
         parser.print_help()
         parser.exit()
 
@@ -388,13 +451,13 @@ class _HelpAction(Action):
 class _VersionAction(Action):
     def __init__(
         self,
-        option_strings,
-        version=None,
-        dest=SUPPRESS,
-        default=SUPPRESS,
-        help="show program's version number and exit",
-        deprecated=False,
-    ):
+        option_strings: Sequence[str],
+        version: str | None = None,
+        dest: Literal[_SUPPRESS_T] = SUPPRESS,
+        default: Literal[_SUPPRESS_T] = SUPPRESS,
+        help: str = "show program's version number and exit",
+        deprecated: bool = False,
+    ) -> None:
         super().__init__(
             option_strings=option_strings,
             dest=dest,
@@ -404,7 +467,13 @@ class _VersionAction(Action):
         )
         self.version = version
 
-    def __call__(self, parser, namespace, values, option_string=None):
+    def __call__(
+        self,
+        parser: ArgumentParser,
+        namespace: Namespace,
+        values: str | Sequence[Any] | None,
+        option_string: str | None = None,
+    ) -> None:
         version = self.version
         if version is None:
             version = parser.version
@@ -414,9 +483,9 @@ class _VersionAction(Action):
         parser.exit()
 
 
-class _SubParsersAction(Action):
+class _SubParsersAction(Action, Generic[ArgumentParser]):
     class _ChoicesPseudoAction(Action):
-        def __init__(self, name, aliases, help):
+        def __init__(self, name: str, aliases: Iterable[str], help: str | None) -> None:
             metavar = dest = name
             if aliases:
                 metavar += " (%s)" % ", ".join(aliases)
@@ -426,18 +495,18 @@ class _SubParsersAction(Action):
 
     def __init__(
         self,
-        option_strings,
-        prog,
-        parser_class,
-        dest=SUPPRESS,
-        required=False,
-        help=None,
-        metavar=None,
+        option_strings: Sequence[str],
+        prog: str,
+        parser_class: type[ArgumentParser],
+        dest: str = SUPPRESS,
+        required: bool = False,
+        help: str | None = None,
+        metavar: str | tuple[str, ...] | None = None,
     ):
-        self._prog_prefix = prog
-        self._parser_class = parser_class
-        self._name_parser_map = {}
-        self._choices_actions = []
+        self._prog_prefix: str = prog
+        self._parser_class: type[ArgumentParser] = parser_class
+        self._name_parser_map: dict[str, ArgumentParser] = {}
+        self._choices_actions: list[Action] = []
         self._deprecated = set()
 
         super().__init__(
@@ -450,7 +519,7 @@ class _SubParsersAction(Action):
             metavar=metavar,
         )
 
-    def add_parser(self, name, *, deprecated=False, **kwargs):
+    def add_parser(self, name: str, *, deprecated: bool = False, **kwargs):
         # set prog from the existing prefix
         if kwargs.get("prog") is None:
             kwargs["prog"] = f"{self._prog_prefix} {name}"
@@ -483,12 +552,17 @@ class _SubParsersAction(Action):
 
         return parser
 
-    def _get_subactions(self):
+    def _get_subactions(self) -> list[Action]:
         return self._choices_actions
 
-    def __call__(self, parser, namespace, values, option_string=None):
-        parser_name = values[0]
-        arg_strings = values[1:]
+    def __call__(
+        self,
+        parser: ArgumentParser,
+        namespace: Namespace,
+        values: str | Sequence[Any] | None,
+        option_string: str | None = None,
+    ) -> None:
+        parser_name, *arg_strings = values
 
         # set the parser name if requested
         if self.dest is not SUPPRESS:
@@ -521,7 +595,13 @@ class _SubParsersAction(Action):
 
 
 class _ExtendAction(_AppendAction):
-    def __call__(self, parser, namespace, values, option_string=None):
+    def __call__(
+        self,
+        parser: ArgumentParser,
+        namespace: Namespace,
+        values: str | Sequence[Any] | None,
+        option_string: str | None = None,
+    ) -> None:
         items = getattr(namespace, self.dest, None)
         items = _copy_items(items)
         items.extend(values)

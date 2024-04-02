@@ -49,12 +49,13 @@ sphinx = "^7.1"
 furo = "^2023.9.10"
 
 [tool.ruff]
-fix = false # old/bad practices in original parser code cause issues when autofixed
+fix = true # old/bad practices in original parser code cause issues when autofixed
 target-version = "py38"
 line-length = 88
 extend-exclude = [
     "docs/*",
-    "tests/fixtures/exceptions/*"
+    "tests/fixtures/exceptions/*",
+    "src/cleo/parser/_types_for_parser.pyi"
 ]
 
 [tool.ruff.lint]
@@ -101,6 +102,9 @@ required-imports = ["from __future__ import annotations"]
 strict = true
 files = ["src", "tests"]
 pretty = true
+exclude = [
+    "src/cleo/parser/_types_for_parser.pyi",
+]
 
 [tool.pytest.ini_options]
 addopts = "-q"
