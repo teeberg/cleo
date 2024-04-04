@@ -488,7 +488,7 @@ class _SubParsersAction(Action, Generic[ArgumentParser]):
         def __init__(self, name: str, aliases: Iterable[str], help: str | None) -> None:
             metavar = dest = name
             if aliases:
-                metavar += " (%s)" % ", ".join(aliases)
+                metavar += f" ({', '.join(aliases)})"
             super(_SubParsersAction._ChoicesPseudoAction, self).__init__(
                 option_strings=[], dest=dest, help=help, metavar=metavar
             )
@@ -527,10 +527,10 @@ class _SubParsersAction(Action, Generic[ArgumentParser]):
         aliases = kwargs.pop("aliases", ())
 
         if name in self._name_parser_map:
-            raise ArgumentError(self, "conflicting subparser: %s" % name)
+            raise ArgumentError(self, f"conflicting subparser: {name}")
         for alias in aliases:
             if alias in self._name_parser_map:
-                raise ArgumentError(self, "conflicting subparser alias: %s" % alias)
+                raise ArgumentError(self, f"conflicting subparser alias: {alias}")
 
         # create a pseudo-action to hold the choice help
         if "help" in kwargs:

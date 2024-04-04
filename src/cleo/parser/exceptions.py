@@ -19,7 +19,7 @@ def _get_action_name(argument: Action | None) -> str | None:
     if argument.dest not in (None, SUPPRESS):
         return argument.dest
     if argument.choices:
-        return "{" + ",".join(argument.choices) + "}"
+        return f"{{{','.join(argument.choices)}}}"
     return None
 
 
