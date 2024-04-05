@@ -1202,8 +1202,7 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
     ):
         if parents is None:
             parents = []
-        superinit = super().__init__
-        superinit(
+        super().__init__(
             description=description,
             prefix_chars=prefix_chars,
             argument_default=argument_default,
