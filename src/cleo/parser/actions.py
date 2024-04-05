@@ -9,6 +9,7 @@ from typing import Generic
 from typing import Iterable
 from typing import Literal
 from typing import Sequence
+from typing import TypeVar
 
 from cleo.parser.common import _UNRECOGNIZED_ARGS_ATTR
 from cleo.parser.common import SUPPRESS
@@ -483,7 +484,10 @@ class _VersionAction(Action):
         parser.exit()
 
 
-class _SubParsersAction(Action, Generic[ArgumentParser]):
+_ArgumentParserT = TypeVar("_ArgumentParserT", bound=ArgumentParser)
+
+
+class _SubParsersAction(Action, Generic[_ArgumentParserT]):
     class _ChoicesPseudoAction(Action):
         def __init__(self, name: str, aliases: Iterable[str], help: str | None) -> None:
             metavar = dest = name
