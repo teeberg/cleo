@@ -573,11 +573,23 @@ class _SubParsersAction(Action, Generic[_ArgumentParserT]):
             setattr(namespace, self.dest, parser_name)
 
         # select the parser
-        try:
-            subparser = self._name_parser_map[parser_name]
-        except KeyError as err:
-            msg = f"unknown parser {parser_name!r} (choices: {', '.join(self._name_parser_map)!s})"
-            raise ArgumentError(self, msg) from err
+        if parser_name not in self._name_parser_map:
+            import difflib
+
+            message = ""
+
+            if similar_options := difflib.get_close_matches(
+                parser_name, self._name_parser_map, cutoff=0.2
+            ):
+                newline_separator = "\n    "
+                message = (
+                    f"\nDid you mean {'this?' if len(similar_options) == 1 else 'one of these?'}"
+                    f" {newline_separator.join(similar_options)}"
+                )
+
+            raise ArgumentError(self, f"unknown parser: {parser_name!r}{message}")
+
+        subparser = self._name_parser_map[parser_name]
 
         if parser_name in self._deprecated:
             parser._warning(f"command '{parser_name!s}' is deprecated")
