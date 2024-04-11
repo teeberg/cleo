@@ -4,6 +4,7 @@ import pytest
 
 from cleo._utils import find_similar_names
 from cleo._utils import format_time
+from cleo._utils import get_indented_string
 from cleo._utils import strip_tags
 
 
@@ -47,3 +48,20 @@ def test_find_similar_names(name: str, expected: list[str]) -> None:
 )
 def test_strip_tags(value: str, expected: str) -> None:
     assert strip_tags(value) == expected
+
+
+@pytest.mark.parametrize(
+    "string, indent, padding, expected",
+    (
+        ("alpha", 5, None, "     alpha"),
+        ("beta", 3, "_", "___beta"),
+        ("gamma", 15, "!", "!!!!!!!!!!!!!!!gamma"),
+        ("", 0, "", ""),
+    ),
+)
+def test_get_indented_string(
+    string: str, indent: int, padding: str | None, expected: str
+) -> None:
+    if padding is None:
+        padding = ""
+    assert get_indented_string(string, indent, padding) == expected

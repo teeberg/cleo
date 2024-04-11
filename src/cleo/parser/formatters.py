@@ -9,6 +9,7 @@ from typing import Iterable
 from typing import Iterator
 from typing import Sequence
 
+from cleo._utils import get_indented_string
 from cleo.parser.common import SUPPRESS
 from cleo.parser.common import NArgsEnum
 from cleo.terminal import Terminal
@@ -41,10 +42,10 @@ class HelpFormatter:
     ) -> None:
         self._prog = prog
         self._indent_increment = indent_increment
-        self._max_help_position = min(
-            max_help_position, max(width - 20, indent_increment * 2)
-        )
         self._width: int = width or Terminal().width - 2
+        self._max_help_position = min(
+            max_help_position, max(self._width - 20, indent_increment * 2)
+        )
 
         self._current_indent = 0
         self._level = 0
@@ -96,7 +97,7 @@ class HelpFormatter:
             # add the heading if the section was non-empty
             if self.heading is not SUPPRESS and self.heading is not None:
                 current_indent = self.formatter._current_indent
-                heading = "%*s%s:\n" % (current_indent, "", self.heading)
+                heading = f"{get_indented_string(self.heading, current_indent)}:\n"
             else:
                 heading = ""
 
@@ -178,21 +179,22 @@ class HelpFormatter:
         usage: str | None,
         actions: Iterable[Action],
         groups: Iterable[_MutuallyExclusiveGroup],
-        prefix: str | None,
+        prefix: str | None = None,
     ) -> str:
-        prefix = prefix or "usage: "
+        prefix = "usage: " if prefix is None else prefix
 
         # if usage is specified, use that
         if usage is not None:
-            usage = usage.format(prog=self._prog)
-
+            # TODO replace
+            # usage = usage.format(prog=self._prog)  # noqa: ERA001
+            usage = usage % {"prog": self._prog}
         # if no optionals or positionals are available, usage is just prog
         elif usage is None and not actions:
-            usage = f"{self._prog}"
+            usage = "%(prog)s" % {"prog": self._prog}  # noqa: UP031
 
         # if optionals and positionals are available, calculate usage
         elif usage is None:
-            prog = f"{self._prog}"
+            prog = "%(prog)s" % {"prog": self._prog}  # noqa: UP031
 
             # split optionals from positionals
             optionals = []
@@ -204,8 +206,7 @@ class HelpFormatter:
                     positionals.append(action)
 
             # build full usage string
-            format = self._format_actions_usage
-            action_usage = format(optionals + positionals, groups)
+            action_usage = self._format_actions_usage(optionals + positionals, groups)
             usage = " ".join([s for s in [prog, action_usage] if s])
 
             # wrap the usage parts if it's too long
@@ -213,8 +214,8 @@ class HelpFormatter:
             if len(prefix) + len(usage) > text_width:
                 # break usage into wrappable parts
                 part_regexp = r"\(.*?\)+(?=\s|$)|" r"\[.*?\]+(?=\s|$)|" r"\S+"
-                opt_usage = format(optionals, groups)
-                pos_usage = format(positionals, groups)
+                opt_usage = self._format_actions_usage(optionals, groups)
+                pos_usage = self._format_actions_usage(positionals, groups)
                 opt_parts = re.findall(part_regexp, opt_usage)
                 pos_parts = re.findall(part_regexp, pos_usage)
                 assert " ".join(opt_parts) == opt_usage
@@ -398,19 +399,23 @@ class HelpFormatter:
 
         # no help; start on same line and add a final newline
         if not action.help:
-            tup = self._current_indent, "", action_header
-            action_header = "%*s%s\n" % tup
+            action_header = (
+                f"{get_indented_string(action_header, self._current_indent)}\n"
+            )
 
         # short action name; start on the same line and pad two spaces
         elif len(action_header) <= action_width:
-            tup = self._current_indent, "", action_width, action_header
-            action_header = "%*s%-*s  " % tup
+            action_header = f"{action_header:<{action_width}}"
+            action_header = (
+                f"{get_indented_string(action_header, self._current_indent)}  "
+            )
             indent_first = 0
 
         # long action name; start on the next line
         else:
-            tup = self._current_indent, "", action_header
-            action_header = "%*s%s\n" % tup
+            action_header = (
+                f"{get_indented_string(action_header, self._current_indent)}\n"
+            )
             indent_first = help_position
 
         # collect the pieces of the action help
@@ -421,9 +426,12 @@ class HelpFormatter:
             help_text = self._expand_help(action)
             if help_text:
                 help_lines = self._split_lines(help_text, help_width)
-                parts.append("%*s%s\n" % (indent_first, "", help_lines[0]))
+                parts.append(f"{get_indented_string(help_lines[0], indent_first)}\n")
                 parts.extend(
-                    ["%*s%s\n" % (help_position, "", line) for line in help_lines[1:]]
+                    [
+                        f"{get_indented_string(line, help_position)}\n"
+                        for line in help_lines[1:]
+                    ]
                 )
 
         # or add a newline if the description doesn't end with one
@@ -464,8 +472,8 @@ class HelpFormatter:
         if action.metavar is not None:
             result = action.metavar
         elif action.choices is not None:
-            choice_strs = [str(choice) for choice in action.choices]
-            result = f"{{{','.join(choice_strs)}}}"
+            choice_str = ",".join([str(choice) for choice in action.choices])
+            result = f"{{{choice_str}}}"
         else:
             result = default_metavar
 
@@ -505,6 +513,7 @@ class HelpFormatter:
             result = " ".join(formats) % get_metavar(action.nargs)
         return result
 
+    # TODO: list variables that can be used in action help
     def _expand_help(self, action: Action) -> str:
         params = dict(vars(action), prog=self._prog)
         for name in list(params):

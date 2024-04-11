@@ -108,3 +108,8 @@ def format_time(secs: float) -> str:
         (fmt for fmt in _TIME_FORMATS if secs < fmt.threshold), _TIME_FORMATS[-1]
     )
     return time_format.apply(secs)
+
+
+def get_indented_string(string: str, indent: int, padding: str = "") -> str:
+    indent = indent + len(string)
+    return f"{string:{padding}>{indent}s}"

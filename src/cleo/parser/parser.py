@@ -36,7 +36,11 @@ from cleo.parser.deprecated import _AttributeHolder
 from cleo.parser.exceptions import ArgumentError
 from cleo.parser.exceptions import ArgumentTypeError
 from cleo.parser.exceptions import _get_action_name
+from cleo.parser.formatters import ArgumentDefaultsHelpFormatter
 from cleo.parser.formatters import HelpFormatter
+from cleo.parser.formatters import MetavarTypeHelpFormatter
+from cleo.parser.formatters import RawDescriptionHelpFormatter
+from cleo.parser.formatters import RawTextHelpFormatter
 
 
 __all__ = [
@@ -49,6 +53,10 @@ __all__ = [
     "Action",
     "NArgsEnum",
     "SUPPRESS",
+    "RawDescriptionHelpFormatter",
+    "RawTextHelpFormatter",
+    "ArgumentDefaultsHelpFormatter",
+    "MetavarTypeHelpFormatter",
 ]
 
 # ==============
@@ -1174,37 +1182,22 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
         # which are represented as '-' in the pattern
         nargs = action.nargs
 
-        # the default (None) is assumed to be a single argument
-        if nargs is None:
-            nargs_pattern = "(-*A-*)"
-
-        # allow zero or one arguments
-        elif nargs == NArgsEnum.OPTIONAL:
-            nargs_pattern = "(-*A?-*)"
-
-        # allow zero or more arguments
-        elif nargs == NArgsEnum.ZERO_OR_MORE:
-            nargs_pattern = "(-*[A-]*)"
-
-        # allow one or more arguments
-        elif nargs == NArgsEnum.ONE_OR_MORE:
-            nargs_pattern = "(-*A[A-]*)"
-
-        # allow any number of options or arguments
-        elif nargs == NArgsEnum.REMAINDER:
-            nargs_pattern = "([-AO]*)"
-
-        # allow one argument followed by any number of options or arguments
-        elif nargs == NArgsEnum.PARSER:
-            nargs_pattern = "(-*A[-AO]*)"
-
-        # suppress action, like nargs=0
-        elif nargs == SUPPRESS:
-            nargs_pattern = "(-*-*)"
-
-        # all others should be integers
-        else:
-            nargs_pattern = "(-*%s-*)" % "-*".join("A" * nargs)
+        nargs_pattern = {
+            # the default (None) is assumed to be a single argument
+            None: "(-*A-*)",
+            # allow zero or one arguments
+            NArgsEnum.OPTIONAL: "(-*A?-*)",
+            # allow zero or more arguments
+            NArgsEnum.ZERO_OR_MORE: "(-*[A-]*)",
+            # allow one or more arguments
+            NArgsEnum.ONE_OR_MORE: "(-*A[A-]*)",
+            # allow any number of options or arguments
+            NArgsEnum.REMAINDER: "([-AO]*)",
+            # allow one argument followed by any number of options or arguments
+            NArgsEnum.PARSER: "(-*A[-AO]*)",
+            # suppress action, like nargs=0
+            SUPPRESS: "(-*-*)",
+        }.get(nargs, f"(-*{'-*'.join('A' * nargs)}-*)")  # all others should be integers
 
         # if this is an optional action, -- is not allowed
         if action.option_strings:

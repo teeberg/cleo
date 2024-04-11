@@ -17,13 +17,13 @@ from cleo.parser.common import NArgsEnum
 from cleo.parser.common import _copy_items
 from cleo.parser.deprecated import _AttributeHolder
 from cleo.parser.exceptions import ArgumentError
-from cleo.parser.parser import ArgumentParser
-from cleo.parser.parser import FileType
-from cleo.parser.parser import Namespace
 
 
 if TYPE_CHECKING:
     from cleo.parser._types import _SUPPRESS_T
+    from cleo.parser.parser import ArgumentParser
+    from cleo.parser.parser import FileType
+    from cleo.parser.parser import Namespace
 
 
 class Action(_AttributeHolder):
@@ -484,7 +484,7 @@ class _VersionAction(Action):
         parser.exit()
 
 
-_ArgumentParserT = TypeVar("_ArgumentParserT", bound=ArgumentParser)
+_ArgumentParserT = TypeVar("_ArgumentParserT", bound="ArgumentParser")
 
 
 class _SubParsersAction(Action, Generic[_ArgumentParserT]):
