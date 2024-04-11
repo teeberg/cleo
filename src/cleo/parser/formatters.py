@@ -185,16 +185,14 @@ class HelpFormatter:
 
         # if usage is specified, use that
         if usage is not None:
-            # TODO replace
-            # usage = usage.format(prog=self._prog)  # noqa: ERA001
-            usage = usage % {"prog": self._prog}
+            usage = usage.format(prog=self._prog)
         # if no optionals or positionals are available, usage is just prog
         elif usage is None and not actions:
-            usage = "%(prog)s" % {"prog": self._prog}  # noqa: UP031
+            usage = f"{self._prog}"
 
         # if optionals and positionals are available, calculate usage
         elif usage is None:
-            prog = "%(prog)s" % {"prog": self._prog}  # noqa: UP031
+            prog = f"{self._prog}"
 
             # split optionals from positionals
             optionals = []
@@ -385,8 +383,8 @@ class HelpFormatter:
         return text.strip()
 
     def _format_text(self, text: str) -> str:
-        if "%(prog)" in text:
-            text = text % {"prog": self._prog}
+        if "{prog}" in text:
+            text = text.format(prog=self._prog)
         text_width = max(self._width - self._current_indent, 11)
         return self._fill_text(text, text_width, self._current_indent) + "\n\n"
 
@@ -485,6 +483,7 @@ class HelpFormatter:
 
         return format
 
+    # TODO: refactor this shit
     def _format_args(self, action: Action, default_metavar: str) -> str:
         get_metavar = self._metavar_formatter(action, default_metavar)
         if action.nargs is None:
@@ -513,9 +512,10 @@ class HelpFormatter:
             result = " ".join(formats) % get_metavar(action.nargs)
         return result
 
-    # TODO: list variables that can be used in action help
+    # TODO: list variables that can be used in action help, refactor
     def _expand_help(self, action: Action) -> str:
-        params = dict(vars(action), prog=self._prog)
+        params = {"prog": self._prog}
+        params.update(vars(action))
         for name in list(params):
             if params[name] is SUPPRESS:
                 del params[name]
@@ -525,7 +525,7 @@ class HelpFormatter:
         if params.get("choices") is not None:
             choices_str = ", ".join([str(c) for c in params["choices"]])
             params["choices"] = choices_str
-        return self._get_help_string(action) % params
+        return self._get_help_string(action).format_map(params)
 
     def _iter_indented_subactions(self, action: Action) -> Iterator[Action]:
         try:
@@ -603,10 +603,10 @@ class ArgumentDefaultsHelpFormatter(HelpFormatter):
         """
         help = action.help or ""
 
-        if "%(default)" not in help and action.default is not SUPPRESS:
+        if "{default}" not in help and action.default is not SUPPRESS:
             defaulting_nargs = [NArgsEnum.OPTIONAL, NArgsEnum.ZERO_OR_MORE]
             if action.option_strings or action.nargs in defaulting_nargs:
-                help += " (default: %(default)s)"
+                help += " (default: {default})"
         return help
 
 

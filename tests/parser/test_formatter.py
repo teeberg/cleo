@@ -37,7 +37,7 @@ class TestHelpFormattingMetaclass(type):
                     self.test_print,
                     self.test_print_file,
                 ]:
-                    test_name = "%s_%s" % (test_func.__name__, func_suffix)
+                    test_name = f"{test_func.__name__}_{func_suffix}"
 
                     def test_wrapper(self, test_func=test_func):
                         test_func(self)
@@ -78,12 +78,12 @@ class TestHelpFormattingMetaclass(type):
 
             def test_format(self, tester):
                 parser = self._get_parser(tester)
-                format = getattr(parser, "format_%s" % self.func_suffix)
+                format = getattr(parser, f"format_{self.func_suffix}")
                 self._test(tester, format())
 
             def test_print(self, tester):
                 parser = self._get_parser(tester)
-                print_ = getattr(parser, "print_%s" % self.func_suffix)
+                print_ = getattr(parser, f"print_{self.func_suffix}")
                 old_stream = getattr(sys, self.std_name)
                 setattr(sys, self.std_name, StdIOBuffer())
                 try:
@@ -95,7 +95,7 @@ class TestHelpFormattingMetaclass(type):
 
             def test_print_file(self, tester):
                 parser = self._get_parser(tester)
-                print_ = getattr(parser, "print_%s" % self.func_suffix)
+                print_ = getattr(parser, f"print_{self.func_suffix}")
                 sfile = StdIOBuffer()
                 print_(sfile)
                 parser_text = sfile.getvalue()
@@ -870,31 +870,31 @@ class TestHelpVariableExpansion(HelpTestCase):
 
     parser_signature = Sig(prog="PROG")
     argument_signatures = [
-        Sig("-x", type=int, help="x %(prog)s %(default)s %(type)s %%"),
+        Sig("-x", type=int, help="x {prog} {default} {type} %"),
         Sig(
             "-y",
             action="store_const",
             default=42,
             const="XXX",
-            help="y %(prog)s %(default)s %(const)s",
+            help="y {prog} {default} {const}",
         ),
-        Sig("--foo", choices="abc", help="foo %(prog)s %(default)s %(choices)s"),
+        Sig("--foo", choices="abc", help="foo {prog} {default} {choices}"),
         Sig(
             "--bar",
             default="baz",
             choices=[1, 2],
             metavar="BBB",
-            help="bar %(prog)s %(default)s %(dest)s",
+            help="bar {prog} {default} {dest}",
         ),
-        Sig("spam", help="spam %(prog)s %(default)s"),
-        Sig("badger", default=0.5, help="badger %(prog)s %(default)s"),
+        Sig("spam", help="spam {prog} {default}"),
+        Sig("badger", default=0.5, help="badger {prog} {default}"),
     ]
     argument_group_signatures = [
         (
             Sig("group"),
             [
-                Sig("-a", help="a %(prog)s %(default)s"),
-                Sig("-b", default=-1, help="b %(prog)s %(default)s"),
+                Sig("-a", help="a {prog} {default}"),
+                Sig("-b", default=-1, help="b {prog} {default}"),
             ],
         )
     ]
@@ -928,7 +928,7 @@ class TestHelpVariableExpansion(HelpTestCase):
 class TestHelpVariableExpansionUsageSupplied(HelpTestCase):
     """Test that variables are expanded properly when usage= is present"""
 
-    parser_signature = Sig(prog="PROG", usage="%(prog)s FOO")
+    parser_signature = Sig(prog="PROG", usage="{prog} FOO")
     argument_signatures = []
     argument_group_signatures = []
     usage = """\
@@ -1310,7 +1310,7 @@ class TestHelpArgumentDefaults(HelpTestCase):
     )
 
     argument_signatures = [
-        Sig("--foo", help="foo help - oh and by the way, %(default)s"),
+        Sig("--foo", help="foo help - oh and by the way, {default}"),
         Sig("--bar", action="store_true", help="bar help"),
         Sig(
             "--taz",
