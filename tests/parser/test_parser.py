@@ -2387,7 +2387,7 @@ class TestAddSubparsers(TestCase):
         )
 
         parser = ErrorRaisingArgumentParser(prog="PROG", description="main description")
-        parser.add_argument("foo", choices=[], help="%(choices)s")
+        parser.add_argument("foo", choices=[], help="{choices}")
         self.assertEqual(
             parser.format_help(),
             textwrap.dedent("""\
@@ -3523,7 +3523,7 @@ class TestOptionalsHelpVersionActions(TestCase):
 
     def test_version_format(self):
         parser = ErrorRaisingArgumentParser(prog="PPP")
-        parser.add_argument("-v", "--version", action="version", version="%(prog)s 3.5")
+        parser.add_argument("-v", "--version", action="version", version="{prog} 3.5")
         with self.assertRaises(ArgumentParserError) as cm:
             parser.parse_args(["-v"])
         self.assertEqual("PPP 3.5\n", cm.exception.stdout)
@@ -3537,7 +3537,7 @@ class TestOptionalsHelpVersionActions(TestCase):
 
     def test_version_action(self):
         parser = ErrorRaisingArgumentParser(prog="XXX")
-        parser.add_argument("-V", action="version", version="%(prog)s 3.7")
+        parser.add_argument("-V", action="version", version="{prog} 3.7")
         with self.assertRaises(ArgumentParserError) as cm:
             parser.parse_args(["-V"])
         self.assertEqual("XXX 3.7\n", cm.exception.stdout)

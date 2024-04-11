@@ -87,7 +87,7 @@ class Action(_AttributeHolder):
         type: Callable[[str], Any] | FileType | None = None,
         choices: Iterable[Any] | None = None,
         required: bool = False,
-        help: str | None = None,
+        help: str = "",
         metavar: str | tuple[str, ...] | None = None,
         deprecated: bool = False,
     ):
@@ -119,7 +119,7 @@ class Action(_AttributeHolder):
         ]
         return [(name, getattr(self, name)) for name in names]
 
-    def format_usage(self):
+    def format_usage(self) -> str:
         return self.option_strings[0]
 
     def __call__(
@@ -139,7 +139,7 @@ class BooleanOptionalAction(Action):
         dest: str,
         default: bool | None = None,
         required: bool = False,
-        help: str | None = None,
+        help: str = "",
         deprecated: bool = False,
         **kwargs,
     ):
@@ -189,7 +189,7 @@ class _StoreAction(Action):
         type: Callable[[str], Any] | FileType | None = None,
         choices: Iterable[Any] | None = None,
         required: bool = False,
-        help: str | None = None,
+        help: str = "",
         metavar: str | tuple[str, ...] | None = None,
         deprecated: bool = False,
     ):
@@ -230,10 +230,10 @@ class _StoreConstAction(Action):
         self,
         option_strings: Sequence[str],
         dest: str,
-        const: Any,
+        const: Any = None,
         default: Any = None,
         required: bool = False,
-        help: str | None = None,
+        help: str = "",
         metavar: str | tuple[str, ...] | None = None,
         deprecated: bool = False,
     ):
@@ -265,7 +265,7 @@ class _StoreTrueAction(_StoreConstAction):
         dest: str,
         default: bool = False,
         required: bool = False,
-        help: str | None = None,
+        help: str = "",
         deprecated: bool = False,
     ):
         super().__init__(
@@ -286,7 +286,7 @@ class _StoreFalseAction(_StoreConstAction):
         dest: str,
         default: bool = True,
         required: bool = False,
-        help: str | None = None,
+        help: str = "",
         deprecated: bool = False,
     ):
         super().__init__(
@@ -358,7 +358,7 @@ class _AppendConstAction(Action):
         const: Any | None = None,
         default: Any = None,
         required: bool = False,
-        help: str | None = None,
+        help: str = "",
         metavar: str | tuple[str, ...] | None = None,
         deprecated: bool = False,
     ):
@@ -394,7 +394,7 @@ class _CountAction(Action):
         dest: str,
         default: Any = None,
         required: bool = False,
-        help: str | None = None,
+        help: str = "",
         deprecated: bool = False,
     ):
         super().__init__(
@@ -426,7 +426,7 @@ class _HelpAction(Action):
         option_strings: Sequence[str],
         dest: Literal[SUPPRESS] = SUPPRESS,
         default: Literal[SUPPRESS] = SUPPRESS,
-        help: str | None = None,
+        help: str = "",
         deprecated=False,
     ) -> None:
         super().__init__(
@@ -504,7 +504,7 @@ class _SubParsersAction(Action, Generic[_ArgumentParserT]):
         parser_class: type[ArgumentParser],
         dest: str = SUPPRESS,
         required: bool = False,
-        help: str | None = None,
+        help: str = "",
         metavar: str | tuple[str, ...] | None = None,
     ):
         self._prog_prefix: str = prog

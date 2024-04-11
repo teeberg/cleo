@@ -22,7 +22,7 @@ from tests.parser.helpers import StdIOBuffer
 # =====================
 
 
-class TestHelpFormattingMetaclass(type):
+class HelpFormattingMetaclass(type):
     def __init__(cls, name, bases, bodydict):
         if name == "HelpTestCase":
             return
@@ -107,7 +107,7 @@ class TestHelpFormattingMetaclass(type):
 
 
 bases = (TestCase,)
-HelpTestCase = TestHelpFormattingMetaclass("HelpTestCase", bases, {})
+HelpTestCase = HelpFormattingMetaclass("HelpTestCase", bases, {})
 
 
 class TestHelpBiggerOptionals(HelpTestCase):

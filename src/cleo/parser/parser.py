@@ -1182,22 +1182,55 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
         # which are represented as '-' in the pattern
         nargs = action.nargs
 
-        nargs_pattern = {
-            # the default (None) is assumed to be a single argument
-            None: "(-*A-*)",
-            # allow zero or one arguments
-            NArgsEnum.OPTIONAL: "(-*A?-*)",
-            # allow zero or more arguments
-            NArgsEnum.ZERO_OR_MORE: "(-*[A-]*)",
-            # allow one or more arguments
-            NArgsEnum.ONE_OR_MORE: "(-*A[A-]*)",
-            # allow any number of options or arguments
-            NArgsEnum.REMAINDER: "([-AO]*)",
-            # allow one argument followed by any number of options or arguments
-            NArgsEnum.PARSER: "(-*A[-AO]*)",
-            # suppress action, like nargs=0
-            SUPPRESS: "(-*-*)",
-        }.get(nargs, f"(-*{'-*'.join('A' * nargs)}-*)")  # all others should be integers
+        # the default (None) is assumed to be a single argument
+        if nargs is None:
+            nargs_pattern = "(-*A-*)"
+
+        # allow zero or one arguments
+        elif nargs == NArgsEnum.OPTIONAL:
+            nargs_pattern = "(-*A?-*)"
+
+        # allow zero or more arguments
+        elif nargs == NArgsEnum.ZERO_OR_MORE:
+            nargs_pattern = "(-*[A-]*)"
+
+        # allow one or more arguments
+        elif nargs == NArgsEnum.ONE_OR_MORE:
+            nargs_pattern = "(-*A[A-]*)"
+
+        # allow any number of options or arguments
+        elif nargs == NArgsEnum.REMAINDER:
+            nargs_pattern = "([-AO]*)"
+
+        # allow one argument followed by any number of options or arguments
+        elif nargs == NArgsEnum.PARSER:
+            nargs_pattern = "(-*A[-AO]*)"
+
+        # suppress action, like nargs=0
+        elif nargs == SUPPRESS:
+            nargs_pattern = "(-*-*)"
+
+        # all others should be integers
+        else:
+            nargs_pattern = "(-*%s-*)" % "-*".join("A" * nargs)
+
+        # FIXME: figure out how to replace the above with this
+        # nargs_pattern = {
+        #     # the default (None) is assumed to be a single argument
+        #     None: "(-*A-*)",
+        #     # allow zero or one arguments
+        #     NArgsEnum.OPTIONAL: "(-*A?-*)",
+        #     # allow zero or more arguments
+        #     NArgsEnum.ZERO_OR_MORE: "(-*[A-]*)",
+        #     # allow one or more arguments
+        #     NArgsEnum.ONE_OR_MORE: "(-*A[A-]*)",
+        #     # allow any number of options or arguments
+        #     NArgsEnum.REMAINDER: "([-AO]*)",
+        #     # allow one argument followed by any number of options or arguments
+        #     NArgsEnum.PARSER: "(-*A[-AO]*)",
+        #     # suppress action, like nargs=0
+        #     SUPPRESS: "(-*-*)",
+        # }.get(nargs, f"(-*{'-*'.join('A' * nargs)}-*)")  # all others should be integers
 
         # if this is an optional action, -- is not allowed
         if action.option_strings:
@@ -1231,12 +1264,12 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
         # namespace
 
         positionals = self._get_positional_actions()
-        a = [
+
+        if a := [
             action
             for action in positionals
             if action.nargs in [NArgsEnum.PARSER, NArgsEnum.REMAINDER]
-        ]
-        if a:
+        ]:
             raise TypeError(
                 f"parse_intermixed_args: positional arg with nargs={a[0].nargs}"
             )
@@ -1260,7 +1293,7 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
                 for action in positionals:
                     # deactivate positionals
                     action.save_nargs = action.nargs
-                    # action.nargs = 0  # noqa: ERA001
+                    # action.nargs = 0
                     action.nargs = SUPPRESS
                     action.save_default = action.default
                     action.default = SUPPRESS

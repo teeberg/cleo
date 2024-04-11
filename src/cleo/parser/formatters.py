@@ -16,7 +16,8 @@ from cleo.terminal import Terminal
 
 
 if TYPE_CHECKING:
-    from cleo._types import Self
+    from typing_extensions import Self
+
     from cleo.parser.actions import Action
     from cleo.parser.parser import _MutuallyExclusiveGroup
 
@@ -220,9 +221,11 @@ class HelpFormatter:
                 assert " ".join(pos_parts) == pos_usage
 
                 # helper for wrapping lines
-                def get_lines(parts: list[str], indent: str, prefix: str | None = None):
-                    lines = []
-                    line = []
+                def get_lines(
+                    parts: list[str], indent: str, prefix: str | None = None
+                ) -> list[str]:
+                    lines: list[str] = []
+                    line: list[str] = []
                     indent_length = len(indent)
                     if prefix is not None:
                         line_len = len(prefix) - 1
@@ -274,7 +277,7 @@ class HelpFormatter:
     ) -> str:
         # find group indices and identify actions in groups
         group_actions = set()
-        inserts = {}
+        inserts: dict[int, str] = {}
         for group in groups:
             if not group._group_actions:
                 raise ValueError(f"empty group {group}")
@@ -319,7 +322,7 @@ class HelpFormatter:
                         inserts[i] = "|"
 
         # collect all actions format strings
-        parts = []
+        parts: list[str | None] = []
         for i, action in enumerate(actions):
             # suppressed arguments are marked with None
             # remove | separators for suppressed arguments
@@ -462,7 +465,7 @@ class HelpFormatter:
         #    -s, --long ARGS
         default = self._get_default_metavar_for_optional(action)
         args_string = self._format_args(action, default)
-        return ", ".join(action.option_strings) + " " + args_string
+        return f"{', '.join(action.option_strings)} {args_string}"
 
     def _metavar_formatter(
         self, action: Action, default_metavar: str
@@ -506,7 +509,7 @@ class HelpFormatter:
             result = ""
         else:
             try:
-                formats = ["%s" for _ in range(action.nargs)]
+                formats = ["%s"] * action.nargs
             except TypeError:
                 raise ValueError("invalid nargs value") from None
             result = " ".join(formats) % get_metavar(action.nargs)
@@ -553,7 +556,7 @@ class HelpFormatter:
             text, width, initial_indent=" " * indent, subsequent_indent=" " * indent
         )
 
-    def _get_help_string(self, action: Action) -> str | None:
+    def _get_help_string(self, action: Action) -> str:
         return action.help
 
     def _get_default_metavar_for_optional(self, action: Action) -> str:
@@ -592,7 +595,7 @@ class ArgumentDefaultsHelpFormatter(HelpFormatter):
     provided by the class are considered an implementation detail.
     """
 
-    def _get_help_string(self, action: Action) -> str | None:
+    def _get_help_string(self, action: Action) -> str:
         """
         Add the default value to the option help message.
 
@@ -601,7 +604,7 @@ class ArgumentDefaultsHelpFormatter(HelpFormatter):
         prevent duplicates or cases where it wouldn't make sense to the end
         user.
         """
-        help = action.help or ""
+        help = action.help
 
         if "{default}" not in help and action.default is not SUPPRESS:
             defaulting_nargs = [NArgsEnum.OPTIONAL, NArgsEnum.ZERO_OR_MORE]
