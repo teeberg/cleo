@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from cleo.parser.parser import HelpFormatter
 
 
-class _FormatterClass(Protocol):
+class FormatterProtocol(Protocol):
     def __call__(self, *, prog: str) -> HelpFormatter: ...
 
 

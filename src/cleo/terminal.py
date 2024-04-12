@@ -54,7 +54,7 @@ class Terminal:
                 size = TerminalSize(*os_size)
             except (AttributeError, ValueError, OSError):
                 # stdout is None, closed, detached, or not a terminal, or
-                # os.get_terminal_size() is unsupported # noqa: ERA001
+                # os.get_terminal_size() is unsupported
                 size = self._fallback
             if width <= 0:
                 width = size.width or self._fallback.width

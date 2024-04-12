@@ -16,7 +16,7 @@ class _AttributeHolder:
     '_kwarg_names', or by inspecting the instance __dict__.
     """
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         type_name = type(self).__name__
         arg_strings = [repr(arg) for arg in self._get_args()]
         star_args = {}

@@ -10,11 +10,15 @@ import sys
 
 from pathlib import Path
 from typing import IO
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Callable
 from typing import Iterable
 from typing import NoReturn
+from typing import Optional
 from typing import Pattern
+from typing import Sequence
+from typing import Tuple
 
 from cleo.parser.actions import Action
 from cleo.parser.actions import BooleanOptionalAction
@@ -41,6 +45,10 @@ from cleo.parser.formatters import HelpFormatter
 from cleo.parser.formatters import MetavarTypeHelpFormatter
 from cleo.parser.formatters import RawDescriptionHelpFormatter
 from cleo.parser.formatters import RawTextHelpFormatter
+
+
+if TYPE_CHECKING:
+    from cleo.parser._types import FormatterProtocol
 
 
 __all__ = [
@@ -114,7 +122,7 @@ class FileType:
         except OSError as e:
             raise ArgumentTypeError(f"can't open '{string}': {e}") from e
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         args = self._mode, self._bufsize
         kwargs = [("encoding", self._encoding), ("errors", self._errors)]
         args_str = ", ".join(
@@ -234,7 +242,7 @@ class _ActionsContainer:
     # Adding argument actions
     # =======================
     # TODO: fill in the annotations when refactored
-    def add_argument(self, *args, **kwargs):
+    def add_argument(self, *args, **kwargs) -> Action:
         """
         add_argument(dest, ..., name=value, ...)
         add_argument(option_string, option_string, ..., name=value, ...)
@@ -568,21 +576,20 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
 
     def __init__(
         self,
-        prog=None,
-        usage=None,
-        description=None,
-        epilog=None,
-        parents=None,
-        formatter_class=HelpFormatter,
-        prefix_chars="-",
-        fromfile_prefix_chars=None,
-        argument_default=None,
-        conflict_handler="error",
-        add_help=True,
-        allow_abbrev=True,
-        exit_on_error=True,
+        prog: str | None = None,
+        usage: str | None = None,
+        description: str | None = None,
+        epilog: str | None = None,
+        parents: Sequence[ArgumentParser] | None = None,
+        formatter_class: FormatterProtocol = HelpFormatter,
+        prefix_chars: str = "-",
+        fromfile_prefix_chars: str | None = None,
+        argument_default: Any = None,
+        conflict_handler: str = "error",
+        add_help: bool = True,
+        allow_abbrev: bool = True,
+        exit_on_error: bool = True,
     ):
-        parents = parents or []
         super().__init__(
             description=description,
             prefix_chars=prefix_chars,
@@ -600,9 +607,9 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
         self.exit_on_error = exit_on_error
 
         add_group = self.add_argument_group
-        self._positionals = add_group("positional arguments")
-        self._optionals = add_group("options")
-        self._subparsers = None
+        self._positionals: _ArgumentGroup = add_group("positional arguments")
+        self._optionals: _ArgumentGroup = add_group("options")
+        self._subparsers: _ArgumentGroup | None = None
 
         # register types
         def identity(string):
@@ -615,15 +622,15 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
         default_prefix = "-" if "-" in prefix_chars else prefix_chars[0]
         if self.add_help:
             self.add_argument(
-                default_prefix + "h",
-                default_prefix * 2 + "help",
+                f"{default_prefix}h",
+                f"{default_prefix * 2}help",
                 action="help",
                 default=SUPPRESS,
                 help="show this help message and exit",
             )
 
         # add parent arguments and defaults
-        for parent in parents:
+        for parent in parents or []:
             if not isinstance(parent, ArgumentParser):
                 raise TypeError("parents must be a list of ArgumentParser")
             self._add_container_actions(parent)
@@ -633,7 +640,7 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
     # =======================
     # Pretty __repr__ methods
     # =======================
-    def _get_kwargs(self):
+    def _get_kwargs(self) -> list[tuple[str, Any]]:
         names = [
             "prog",
             "usage",
@@ -678,17 +685,17 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
         # return the created parsers action
         return action
 
-    def _add_action(self, action):
+    def _add_action(self, action: Action) -> Action:
         if action.option_strings:
             self._optionals._add_action(action)
         else:
             self._positionals._add_action(action)
         return action
 
-    def _get_optional_actions(self):
+    def _get_optional_actions(self) -> list[Action]:
         return [action for action in self._actions if action.option_strings]
 
-    def _get_positional_actions(self):
+    def _get_positional_actions(self) -> list[Action]:
         return [action for action in self._actions if not action.option_strings]
 
     # =====================================
@@ -735,7 +742,9 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
             delattr(namespace, _UNRECOGNIZED_ARGS_ATTR)
         return namespace, args
 
-    def _parse_known_args(self, arg_strings, namespace):
+    def _parse_known_args(
+        self, arg_strings: list[str], namespace: Namespace
+    ) -> tuple[Namespace, list[str]]:
         # replace arg strings that are file references
         if self.fromfile_prefix_chars is not None:
             arg_strings = self._read_args_from_files(arg_strings)
@@ -1007,7 +1016,7 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
         # return the updated namespace and the extra arguments
         return namespace, extras
 
-    def _read_args_from_files(self, arg_strings):
+    def _read_args_from_files(self, arg_strings: list[str]) -> list[str]:
         # expand arguments referencing files
         new_arg_strings = []
         for arg_string in arg_strings:
@@ -1034,10 +1043,10 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
         # return the modified argument list
         return new_arg_strings
 
-    def convert_arg_line_to_args(self, arg_line):
+    def convert_arg_line_to_args(self, arg_line: str) -> list[str]:
         return [arg_line]
 
-    def _match_argument(self, action, arg_strings_pattern):
+    def _match_argument(self, action: Action, arg_strings_pattern: str) -> int:
         # match the pattern for this action to the arg strings
         nargs_pattern = self._get_nargs_pattern(action)
         match = re.match(nargs_pattern, arg_strings_pattern)
@@ -1057,7 +1066,9 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
         # return the number of arguments matched
         return len(match.group(1))
 
-    def _match_arguments_partial(self, actions, arg_strings_pattern):
+    def _match_arguments_partial(
+        self, actions: Sequence[Action], arg_strings_pattern: str
+    ) -> list[int]:
         # progressively shorten the actions list by slicing off the
         # final actions until we find a match
         result = []
@@ -1074,7 +1085,9 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
         # return the list of arg string counts
         return result
 
-    def _parse_optional(self, arg_string):
+    _OptionalTuple = Tuple[Optional[Action], str, Optional[str], Optional[str]]
+
+    def _parse_optional(self, arg_string: str) -> _OptionalTuple | None:
         # if it's an empty string, it was meant to be a positional
         if not arg_string:
             return None
@@ -1135,7 +1148,7 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
         # in this parser (though it might be a valid option in a subparser)
         return None, arg_string, None, None
 
-    def _get_option_tuples(self, option_string):
+    def _get_option_tuples(self, option_string: str) -> Sequence[_OptionalTuple]:
         result = []
 
         # option strings starting with two prefix characters are only
@@ -1177,7 +1190,7 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
         # return the collected option tuples
         return result
 
-    def _get_nargs_pattern(self, action):
+    def _get_nargs_pattern(self, action: Action) -> str:
         # in all examples below, we have to allow for '--' args
         # which are represented as '-' in the pattern
         nargs = action.nargs
@@ -1304,9 +1317,9 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
                         hasattr(namespace, action.dest)
                         and getattr(namespace, action.dest) == []
                     ):
-                        from warnings import warning
+                        from warnings import warn
 
-                        warning(
+                        warn(
                             f"Do not expect {action.dest} in {namespace}", stacklevel=1
                         )
                         delattr(namespace, action.dest)
@@ -1339,7 +1352,7 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
     # ========================
     # Value conversion methods
     # ========================
-    def _get_values(self, action, arg_strings):
+    def _get_values(self, action: Action, arg_strings: list[str]) -> Any:
         # for everything but PARSER, REMAINDER args, strip out first '--'
         if not action.option_strings and action.nargs not in [
             NArgsEnum.PARSER,
@@ -1398,7 +1411,7 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
         # return the converted value
         return value
 
-    def _get_value(self, action, arg_string):
+    def _get_value(self, action: Action, arg_string: str) -> Any:
         type_func = self._registry_get("type", action.type, action.type)
         if not callable(type_func):
             raise ArgumentError(action, f"{type_func!r} is not callable")
@@ -1422,7 +1435,7 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
         # return the converted value
         return result
 
-    def _check_value(self, action, value):
+    def _check_value(self, action: Action, value: Any) -> None:
         # converted value must be one of the choices (if specified)
         if action.choices is not None and value not in action.choices:
             raise ArgumentError(
@@ -1433,12 +1446,12 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
     # =======================
     # Help-formatting methods
     # =======================
-    def format_usage(self):
+    def format_usage(self) -> str:
         formatter = self._get_formatter()
         formatter.add_usage(self.usage, self._actions, self._mutually_exclusive_groups)
         return formatter.format_help()
 
-    def format_help(self):
+    def format_help(self) -> str:
         formatter = self._get_formatter()
 
         # usage
@@ -1460,23 +1473,23 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
         # determine help from format above
         return formatter.format_help()
 
-    def _get_formatter(self):
+    def _get_formatter(self) -> HelpFormatter:
         return self.formatter_class(prog=self.prog)
 
     # =====================
     # Help-printing methods
     # =====================
-    def print_usage(self, file=None):
+    def print_usage(self, file: IO[str] | None = None) -> None:
         if file is None:
             file = sys.stdout
         self._print_message(self.format_usage(), file)
 
-    def print_help(self, file=None):
+    def print_help(self, file: IO[str] | None = None) -> None:
         if file is None:
             file = sys.stdout
         self._print_message(self.format_help(), file)
 
-    def _print_message(self, message, file=None):
+    def _print_message(self, message: str, file: IO[str] | None = None) -> None:
         if message:
             file = file or sys.stderr
             with contextlib.suppress(AttributeError, OSError):
@@ -1485,12 +1498,12 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
     # ===============
     # Exiting methods
     # ===============
-    def exit(self, status=0, message=None):
+    def exit(self, status: int = 0, message: str | None = None) -> NoReturn:
         if message:
             self._print_message(message, sys.stderr)
         sys.exit(status)
 
-    def error(self, message):
+    def error(self, message: str) -> NoReturn:
         """error(message: string)
 
         Prints a usage message incorporating the message to stderr and
@@ -1502,5 +1515,5 @@ class ArgumentParser(_AttributeHolder, _ActionsContainer):
         self.print_usage(sys.stderr)
         self.exit(2, f"{self.prog!s}: error: {message!s}\n")
 
-    def _warning(self, message):
+    def _warning(self, message: str) -> None:
         self._print_message(f"{self.prog!s}: warning: {message!s}\n", sys.stderr)

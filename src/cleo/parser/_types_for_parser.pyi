@@ -1,24 +1,14 @@
-# import sys
-#
 # from collections.abc import Callable
-# from collections.abc import Generator
 # from collections.abc import Iterable
-# from collections.abc import Sequence
-# from re import Pattern
-# from typing import IO
 # from typing import Any
 # from typing import Generic
 # from typing import Literal
 # from typing import NewType
-# from typing import NoReturn
-# from typing import Protocol
 # from typing import TypeVar
 # from typing import overload
 #
-# from _typeshed import sentinel
-# from typing_extensions import Self
 # from typing_extensions import TypeAlias
-# from typing_extensions import deprecated
+#
 #
 # __all__ = [
 #     "ArgumentParser",
@@ -38,10 +28,8 @@
 #     "REMAINDER",
 #     "SUPPRESS",
 #     "ZERO_OR_MORE",
+#     "BooleanOptionalAction"
 # ]
-#
-# if sys.version_info >= (3, 9):
-#     __all__ += ["BooleanOptionalAction"]
 #
 # _T = TypeVar("_T")
 # _ActionT = TypeVar("_ActionT", bound=Action)
@@ -114,39 +102,23 @@
 #     _subparsers: _ArgumentGroup | None
 #
 #     # Note: the constructor arguments are also used in _SubParsersAction.add_parser.
-#     if sys.version_info >= (3, 9):
-#         def __init__(
-#             self,
-#             prog: str | None = None,
-#             usage: str | None = None,
-#             description: str | None = None,
-#             epilog: str | None = None,
-#             parents: Sequence[ArgumentParser] = [],
-#             formatter_class: _FormatterClass = ...,
-#             prefix_chars: str = "-",
-#             fromfile_prefix_chars: str | None = None,
-#             argument_default: Any = None,
-#             conflict_handler: str = "error",
-#             add_help: bool = True,
-#             allow_abbrev: bool = True,
-#             exit_on_error: bool = True,
-#         ) -> None: ...
-#     else:
-#         def __init__(
-#             self,
-#             prog: str | None = None,
-#             usage: str | None = None,
-#             description: str | None = None,
-#             epilog: str | None = None,
-#             parents: Sequence[ArgumentParser] = [],
-#             formatter_class: _FormatterClass = ...,
-#             prefix_chars: str = "-",
-#             fromfile_prefix_chars: str | None = None,
-#             argument_default: Any = None,
-#             conflict_handler: str = "error",
-#             add_help: bool = True,
-#             allow_abbrev: bool = True,
-#         ) -> None: ...
+#     def __init__(
+#         self,
+#         prog: str | None = None,
+#         usage: str | None = None,
+#         description: str | None = None,
+#         epilog: str | None = None,
+#         parents: Sequence[ArgumentParser] = [],
+#         formatter_class: _FormatterClass = ...,
+#         prefix_chars: str = "-",
+#         fromfile_prefix_chars: str | None = None,
+#         argument_default: Any = None,
+#         conflict_handler: str = "error",
+#         add_help: bool = True,
+#         allow_abbrev: bool = True,
+#         exit_on_error: bool = True,
+#     ) -> None: ...
+#
 #
 #     @overload
 #     def parse_args(
@@ -156,6 +128,8 @@
 #     def parse_args(self, args: Sequence[str] | None, namespace: _N) -> _N: ...
 #     @overload
 #     def parse_args(self, *, namespace: _N) -> _N: ...
+#
+#
 #     @overload
 #     def add_subparsers(
 #         self: _ArgumentParserT,
@@ -185,10 +159,7 @@
 #         help: str | None = ...,
 #         metavar: str | None = ...,
 #     ) -> _SubParsersAction[_ArgumentParserT]: ...
-#     def print_usage(self, file: IO[str] | None = None) -> None: ...
-#     def print_help(self, file: IO[str] | None = None) -> None: ...
-#     def format_usage(self) -> str: ...
-#     def format_help(self) -> str: ...
+#
 #     @overload
 #     def parse_known_args(
 #         self, args: Sequence[str] | None = None, namespace: None = None
@@ -199,9 +170,9 @@
 #     ) -> tuple[_N, list[str]]: ...
 #     @overload
 #     def parse_known_args(self, *, namespace: _N) -> tuple[_N, list[str]]: ...
-#     def convert_arg_line_to_args(self, arg_line: str) -> list[str]: ...
-#     def exit(self, status: int = 0, message: str | None = None) -> NoReturn: ...
-#     def error(self, message: str) -> NoReturn: ...
+#
+#
+#
 #     @overload
 #     def parse_intermixed_args(
 #         self, args: Sequence[str] | None = None, namespace: None = None
@@ -222,29 +193,7 @@
 #     ) -> tuple[_N, list[str]]: ...
 #     @overload
 #     def parse_known_intermixed_args(self, *, namespace: _N) -> tuple[_N, list[str]]: ...
-#     # undocumented
-#     def _get_optional_actions(self) -> list[Action]: ...
-#     def _get_positional_actions(self) -> list[Action]: ...
-#     def _parse_known_args(
-#         self, arg_strings: list[str], namespace: Namespace
-#     ) -> tuple[Namespace, list[str]]: ...
-#     def _read_args_from_files(self, arg_strings: list[str]) -> list[str]: ...
-#     def _match_argument(self, action: Action, arg_strings_pattern: str) -> int: ...
-#     def _match_arguments_partial(
-#         self, actions: Sequence[Action], arg_strings_pattern: str
-#     ) -> list[int]: ...
-#     def _parse_optional(
-#         self, arg_string: str
-#     ) -> tuple[Action | None, str, str | None] | None: ...
-#     def _get_option_tuples(
-#         self, option_string: str
-#     ) -> list[tuple[Action, str, str | None]]: ...
-#     def _get_nargs_pattern(self, action: Action) -> str: ...
-#     def _get_values(self, action: Action, arg_strings: list[str]) -> Any: ...
-#     def _get_value(self, action: Action, arg_string: str) -> Any: ...
-#     def _check_value(self, action: Action, value: Any) -> None: ...
-#     def _get_formatter(self) -> HelpFormatter: ...
-#     def _print_message(self, message: str, file: IO[str] | None = None) -> None: ...
+#
 #
 # # undocumented
 # class _SubParsersAction(Action, Generic[_ArgumentParserT]):
